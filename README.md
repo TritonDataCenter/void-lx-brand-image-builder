@@ -27,6 +27,11 @@ Example:
 
     # ./install -a x86_64 -d void-install -m https://alpha.de.repo.voidlinux.org -i void -p 'Void Linux'
 
+Dependencies:
+
+    xbps-install xz
+
+
 ### 2. Create a VM image
 
 Copy the tarball generated in step 1 to a SmartOS machine or SDC headnode and
