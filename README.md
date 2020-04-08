@@ -23,14 +23,17 @@ will create a tarball of the installation in your working directory (named
 
 See `./install -h` for detailed usage.
 
+Dependencies:
+
+    xbps-install git
+    xbps-install wget
+    xbps-install xz
+    git submodule update --init # needed for guesttools
+
 Example:
 
     # ./install -a x86_64 -d void-install -m https://alpha.de.repo.voidlinux.org -i void -p 'Void Linux'
 
-Dependencies:
-
-    xbps-install wget
-    xbps-install xz
 
 ### 2. Create a VM image
 
