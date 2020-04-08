@@ -1,43 +1,51 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2015 Joyent Inc., All rights reserved.
+# Install Void Linux into a directory, modify the installation, then tar it up.
 #
-# Install Alpine into a directory, modify the installation, then tar it up.
+
 #
-if [[ -n "$TRACE" ]]; then
-  export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-  set -o xtrace
+# Copyright 2020 Joyent Inc.
+#
+
+if [[ -n $TRACE ]]; then
+	export PS4='[\D{%FT%TZ}] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+	set -o xtrace
 fi
 
 set -euo pipefail
-IFS=$'\n\t'
 
 GUESTTOOLS=guesttools
 BUILD_DATE=$(date +%Y%m%d)
 
 export PATH=$PATH:/sbin:/bin
 
+fatal() {
+	echo "$@" >&2
+	exit 1
+}
+
 usage() {
-cat <<EOF
+	cat <<-EOF
 
-Install and modify Void in a given directory in a given directory using a given mirror
+	Install and modify Void in a given directory in a given directory using a given mirror
 
-Usage:
-  $0 -a <ARCH> -d <INSTALL_DIR> -m <MIRROR> -i <IMAGE_NAME> -p <NAME> -D <DESC> -u <DOCS>
+	Usage:
+	  $0 -a <arch> -d <dir> -m <mirror> -i <img> -p <name> -D <desc> -u <url>
 
-Example:
-  $0 -a <x86_64-musl> -x xbps-static-latest.x86_64-musl.tar.xz -d /data/void -m https://alpha.de.repo.voidlinux.org -i void -p "Void Linux" -D "Void 64-bit lx-brand image." -u https://docs.joyent.com/images/container-native-linux
+	Example:
+	  $0 -a x86_64-musl -d /data/void -m https://alpha.de.repo.voidlinux.org -i void -p "Void Linux" -D "Void 64-bit lx-brand image." -u https://docs.joyent.com/images/container-native-linux
 
-OPTIONS:
-  -d A path to the install directory
-  -m A URL for the desired archive mirror
-  -i The name of the image. This is used for naming the tarball.
-  -p The proper name of the image. Use quotes. This is used in the MOTD and /etc/product file.
-  -D A description for the image. This is used in the image manifest and the /etc/product file.
-  -u A URL to the image docs [optional]
-  -h Show this message
+	OPTIONS:
+	  -a <arch>     Void Linux arch to install - must be 'x86_64' (glibc) or 'x86_64-musl' (musl)
+	  -D <desc>     A description for the image. This is used in the image manifest and the /etc/product file.
+	  -d <dir>      A path to the install directory
+	  -h            Show this message and exit
+	  -i <img>      The name of the image. This is used for naming the tarball.
+	  -m <mirro>    A URL for the desired archive mirror
+	  -p <name>     The proper name of the image. Use quotes. This is used in the MOTD and /etc/product file.
+	  -u <url>      A URL to the image docs [optional]
 
-EOF
+	EOF
 }
 
 ARCH=
@@ -48,76 +56,50 @@ NAME=
 DESC=
 DOCS=
 
-while getopts "ha:d:m:i:p:D:u:" OPTION
+while getopts 'ha:d:m:i:p:D:u:' OPTION
 do
 	case $OPTION in
 		h)
 			usage
-			exit
+			exit 0
 			;;
 		a)
-			ARCH=${OPTARG}
+			ARCH=$OPTARG
 			;;
 		d)
-			INSTALL_DIR=${OPTARG}
+			INSTALL_DIR=$OPTARG
 			;;
 		m)
 			MIRROR=${OPTARG%/}
 			;;
 		i)
-			IMAGE_NAME=${OPTARG}
+			IMAGE_NAME=$OPTARG
 			;;
 		p)
-			NAME=${OPTARG}
+			NAME=$OPTARG
 			;;
 		D)
-			DESC=${OPTARG}
+			DESC=$OPTARG
 			;;
 		u)
-			DOCS=${OPTARG}
+			DOCS=$OPTARG
 			;;
-		\?)
+		*)
 			usage
-			exit
+			exit 1
 			;;
 	esac
 done
 
-if [[ $# -eq 0 ]]; then
-	usage
-	exit 1
-fi
 
-if [[ -z ${ARCH} ]]; then
-	echo "Error: missing arch (-a) value x86_64 || x86_64-musl"
-	exit 1
-fi
-
-if [[ -z ${INSTALL_DIR} ]]; then
-	echo "Error: missing install directory (-d) value"
-	exit 1
-fi
-
-if [[ -z ${MIRROR} ]]; then
-	echo "Error: missing libc (-m) value"
-	exit 1
-fi
-
-if [[ -z ${IMAGE_NAME} ]]; then
-	echo "Error: missing image name (-i) value"
-	exit 1
-fi
-
-if [[ -z ${NAME} ]]; then
-	echo "Error: missing proper name (-p) value"
-	exit 1
-fi
+[[ -n $ARCH ]]        || fatal 'Error: missing arch (-a) value x86_64 || x86_64-musl'
+[[ -n $INSTALL_DIR ]] || fatal 'Error: missing install directory (-d) value'
+[[ -n $MIRROR ]]      || fatal 'Error: missing mirror (-m) url value'
+[[ -n $IMAGE_NAME ]]  || fatal 'Error: missing image name (-i) value'
+[[ -n $NAME ]]        || fatal 'Error: missing proper name (-p) value'
+[[ -n $DOCS ]]        || DOCS='https://docs.joyent.com/images/container-native-linux'
 
 TARGET=$PWD/$IMAGE_NAME-$BUILD_DATE.tar.gz
-
-if [[ -z ${DOCS} ]]; then
-	DOCS="https://docs.joyent.com/images/container-native-linux"
-fi
 
 # make absolute dir
 if [[ ${INSTALL_DIR:0:1} != '/' ]]; then
@@ -149,43 +131,43 @@ fi
 
 cd tmp/
 
-export BIN="./usr/bin"
-
+# download static xbps tools to install the base install
 wget -O - "$MIRROR/static/xbps-static-latest.$(uname -m)-musl.tar.xz" | tar Jx
+bindir=$PWD/usr/bin
 
 echo "==> Adding void keys"
 mkdir -p "$INSTALL_DIR/var/db/xbps/keys"
 cp ../keys/* "$INSTALL_DIR/var/db/xbps/keys/"
 
-echo "===> Installing Void base from ${MIRROR}"
-XBPS_ARCH=${ARCH} ${BIN}/xbps-install.static -yMU \
-  "--repository=$MIRROR/current" \
-  "--repository=$MIRROR/current/musl" \
-  -r "$INSTALL_DIR" \
-  base-minimal \
-  ca-certificates \
-  bash \
-  jq \
-  curl \
-  gettext \
-  less \
-  man \
-  openssh \
-  tzdata \
-  vim \
-  pam \
-  wget \
-  ncurses \
-  iproute2 \
-  iputils
+echo "===> Installing Void base from $MIRROR"
+#  "--repository=$MIRROR/current/musl" \
+XBPS_ARCH=$ARCH "$bindir/xbps-install.static" -yMU \
+	"--repository=$MIRROR/current" \
+	-r "$INSTALL_DIR" \
+	base-minimal \
+	ca-certificates \
+	bash \
+	jq \
+	curl \
+	gettext \
+	less \
+	man \
+	openssh \
+	tzdata \
+	vim \
+	pam \
+	wget \
+	ncurses \
+	iproute2 \
+	iputils
 
 chroot "$INSTALL_DIR" xbps-reconfigure -a
 
 echo "==> Removing unecessary runit services"
-rm -rf "$INSTALL_DIR/etc/runit/core-services/01-static-devnodes.sh"
-rm -rf "$INSTALL_DIR/etc/runit/core-services/02-kmods.sh"
-rm -rf "$INSTALL_DIR/etc/runit/core-services/02-udev.sh"
-rm -rf "$INSTALL_DIR/etc/runit/core-services/03-filesystems.sh"
+rm -f "$INSTALL_DIR/etc/runit/core-services/01-static-devnodes.sh"
+rm -f "$INSTALL_DIR/etc/runit/core-services/02-kmods.sh"
+rm -f "$INSTALL_DIR/etc/runit/core-services/02-udev.sh"
+rm -f "$INSTALL_DIR/etc/runit/core-services/03-filesystems.sh"
 
 echo "==> linking required runit services"
 chroot "$INSTALL_DIR" ln -s /etc/sv/sshd /etc/runit/runsvdir/default
@@ -200,9 +182,7 @@ done
 chroot "$INSTALL_DIR" passwd -d root
 
 echo "==> Setting TZ to UTC"
-#chroot $INSTALL_DIR apk add --update tzdata
-#cp $INSTALL_DIR/usr/share/zoneinfo/UTC $INSTALL_DIR/etc/localtime
-#chroot $INSTALL_DIR apk del --purge tzdata
+chroot "$INSTALL_DIR" ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 
 echo "==> Disabling PasswordAuthentication"
 sed -ri s/^#?PasswordAuthentication\ no/PasswordAuthentication\ no/  -i "$INSTALL_DIR/etc/ssh/sshd_config"
@@ -227,7 +207,7 @@ Documentation: $DOCS
 Description: $DESC
 PRODUCT
 
-touch "$INSTALL_DIR/etc/void-release"
+cat "$INSTALL_DIR/etc/motd" "$INSTALL_DIR/etc/product" >  "$INSTALL_DIR/etc/void-release"
 
 echo "==> Installing Guest tools in $INSTALL_DIR"
 echo "====> Running ./install.sh -i $INSTALL_DIR"
