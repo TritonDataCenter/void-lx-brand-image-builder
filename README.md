@@ -29,8 +29,8 @@ Example:
 
 Dependencies:
 
+    xbps-install wget
     xbps-install xz
-
 
 ### 2. Create a VM image
 
