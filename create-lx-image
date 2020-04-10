@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2015 Joyent Inc., All rights reserved.
+# Copyright 2020 Joyent Inc.
 #
 # Create an lx-brand image from a given tar file
 
@@ -23,13 +23,13 @@ DOCS=
 usage() {
 cat <<EOF
 
-Create an lx brand Alpine image from a given tar file
+Create an lx brand Void image from a given tar file
 
 Usage:
   $0 -t <TARBALL> -k <KERNEL> -m <MIN_PLATFORM> -i <IMAGE_NAME> -d <DESC> -u <DOCS>
 
 Example:
-  $0 -t /var/tmp/lx-alpine-20150408.tar.gz -k 3.13.0 -m 20150316T201553Z -i lx-alpine -d "Alpine 64-bit lx-brand image." -u https://docs.joyent.com/images/container-native-linux
+  $0 -t ~/void-20200408.tar.gz -k 5 -m "\$(uname -v | cut -d_ -f2)" -i void -d 'Void 64-bit lx-brand image.'
 
 OPTIONS:
   -t The full path to the tar archive

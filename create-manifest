@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2015 Joyent Inc., All rights reserved.
+# Copyright 2020 Joyent Inc.
 #
 
 set -o errexit
@@ -44,7 +44,7 @@ OPTIONS:
 
 Example:
 
-    $0 -f alpine-20150319.zfs.gz -k 3.14.36 -m 20150316T201553Z -n lx-alpine -v 20150319
+    $0 -f void-20150319.zfs.gz -k 3.14.36 -m 20150316T201553Z -n lx-void -v 20150319
 
 USAGE
 	exit 1
