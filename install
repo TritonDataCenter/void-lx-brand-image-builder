@@ -163,6 +163,10 @@ XBPS_ARCH=$ARCH "$bindir/xbps-install.static" -yMU \
 
 chroot "$INSTALL_DIR" xbps-reconfigure -a
 
+echo '==> Setting libc locale to en_US UTF8'
+echo 'en_US.UTF-8 UTF-8' >> "$INSTALL_DIR/etc/default/libc-locales"
+chroot "$INSTALL_DIR" xbps-reconfigure -f glibc-locales
+
 echo "==> Clearing unecessary runit services"
 msg='# cleared by void-lx-brand-image-builder'
 echo "$msg" > "$INSTALL_DIR/etc/runit/core-services/01-static-devnodes.sh"
